@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Think Complete - Hangman Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .hangman-drawing {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 0 auto;
+        }
+        
+        .hangman-part {
+            position: absolute;
+            background-color: #4a5568;
+            display: none;
+        }
+        
+        /* Gallows */
+        #gallows-base {
+            width: 150px;
+            height: 10px;
+            bottom: 0;
+            left: 75px;
+            display: block;
+        }
+        
+        #gallows-post {
+            width: 10px;
+            height: 250px;
+            bottom: 0;
+            left: 75px;
+            display: block;
+        }
+        
+        #gallows-top {
+            width: 100px;
+            height: 10px;
+            top: 0;
+            left: 85px;
+            display: block;
+        }
+        
+        #gallows-hanger {
+            width: 10px;
+            height: 50px;
+            top: 0;
+            left: 175px;
+            display: block;
+        }
+        
+        /* Head */
+        #head {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            top: 50px;
+            left: 150px;
+        }
+        
+        /* Body */
+        #body {
+            width: 10px;
+            height: 100px;
+            top: 100px;
+            left: 172px;
+        }
+        
+        /* Arms */
+        #left-arm {
+            width: 60px;
+            height: 10px;
+            top: 120px;
+            left: 122px;
+            transform: rotate(30deg);
+        }
+        
+        #right-arm {
+            width: 60px;
+            height: 10px;
+            top: 120px;
+            left: 182px;
+            transform: rotate(-30deg);
+        }
+        
+        /* Legs */
+        #left-leg {
+            width: 60px;
+            height: 10px;
+            top: 200px;
+            left: 122px;
+            transform: rotate(-30deg);
+        }
+        
+        #right-leg {
+            width: 60px;
+            height: 10px;
+            top: 200px;
+            left: 182px;
+            transform: rotate(30deg);
+        }
+        
+        /* Eyes */
+        #left-eye {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: white;
+            top: 65px;
+            left: 160px;
+        }
+        
+        #right-eye {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: white;
+            top: 65px;
+            left: 180px;
+        }
+        
+        /* Mouth */
+        #mouth {
+            width: 30px;
+            height: 10px;
+            border-bottom-left-radius: 20px;
+            border-bottom-right-radius: 20px;
+            top: 85px;
+            left: 160px;
+            background-color: white;
+        }
+        
+        .letter-tile {
+            transition: all 0.3s ease;
+        }
+        
+        .letter-tile:hover:not(.guessed) {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .keyboard-key {
+            transition: all 0.2s ease;
+        }
+        
+        .keyboard-key:hover:not(.used) {
+            transform: scale(1.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        .shake {
+            animation: shake 0.5s;
+        }
+        
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-purple-50 min-h-screen font-sans">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600 mb-2">
+                Think Complete
+            </h1>
+            <p class="text-xl text-gray-600">The ultimate Hangman challenge</p>
+        </header>
+        
+        <!-- Game Area -->
+        <div class="flex flex-col lg:flex-row gap-8 items-center justify-center">
+            <!-- Hangman Drawing -->
+            <div class="w-full lg:w-1/2 flex flex-col items-center">
+                <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
+                    <div class="hangman-drawing mb-6">
+                        <!-- Gallows (always visible) -->
+                        <div class="hangman-part" id="gallows-base"></div>
+                        <div class="hangman-part" id="gallows-post"></div>
+                        <div class="hangman-part" id="gallows-top"></div>
+                        <div class="hangman-part" id="gallows-hanger"></div>
+                        
+                        <!-- Hangman parts (hidden initially) -->
+                        <div class="hangman-part" id="head"></div>
+                        <div class="hangman-part" id="body"></div>
+                        <div class="hangman-part" id="left-arm"></div>
+                        <div class="hangman-part" id="right-arm"></div>
+                        <div class="hangman-part" id="left-leg"></div>
+                        <div class="hangman-part" id="right-leg"></div>
+                        <div class="hangman-part" id="left-eye"></div>
+                        <div class="hangman-part" id="right-eye"></div>
+                        <div class="hangman-part" id="mouth"></div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div id="word-display" class="flex justify-center gap-3 mb-8 flex-wrap">
+                            <!-- Word letters will appear here -->
+                        </div>
+                        
+                        <div class="mb-6">
+                            <div class="text-sm text-gray-500 mb-1">Category</div>
+                            <div id="category" class="text-lg font-semibold text-purple-700">Loading...</div>
+                        </div>
+                        
+                        <div class="flex justify-between mb-6">
+                            <div>
+                                <div class="text-sm text-gray-500">Wrong guesses</div>
+                                <div id="wrong-guesses" class="text-lg font-bold text-red-500">0/6</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-500">Score</div>
+                                <div id="score" class="text-lg font-bold text-green-600">0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Keyboard and Controls -->
+            <div class="w-full lg:w-1/2">
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Guess the word</h2>
+                    
+                    <!-- Virtual Keyboard -->
+                    <div id="keyboard" class="grid grid-cols-9 gap-2 mb-6">
+                        <!-- Keyboard will be generated here -->
+                    </div>
+                    
+                    <!-- Game Controls -->
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button id="hint-btn" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2">
+                            <i class="fas fa-lightbulb"></i> Get Hint
+                        </button>
+                        <button id="new-game-btn" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2">
+                            <i class="fas fa-redo"></i> New Game
+                        </button>
+                    </div>
+                    
+                    <!-- Hint Display -->
+                    <div id="hint-display" class="mt-4 p-3 bg-blue-50 rounded-lg text-blue-800 hidden">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <span id="hint-text"></span>
+                    </div>
+                    
+                    <!-- Game Messages -->
+                    <div id="message" class="mt-4 p-3 rounded-lg text-center font-semibold hidden"></div>
+                </div>
+                
+                <!-- Game Stats -->
+                <div class="bg-white rounded-xl shadow-lg p-6 mt-4">
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">Game Stats</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <div class="text-sm text-gray-500">Games Played</div>
+                            <div id="games-played" class="text-2xl font-bold">0</div>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <div class="text-sm text-gray-500">Games Won</div>
+                            <div id="games-won" class="text-2xl font-bold text-green-600">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Game Over Modal -->
+    <div id="game-over-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4 transform transition-all duration-300 scale-95">
+            <div class="text-center">
+                <div id="game-result-icon" class="text-6xl mb-4">
+                    <!-- Icon will be inserted here -->
+                </div>
+                <h2 id="game-result-title" class="text-3xl font-bold mb-2">Game Over</h2>
+                <p id="game-result-message" class="text-gray-600 mb-6">The word was: <span id="correct-word" class="font-bold"></span></p>
+                
+                <div class="mb-6">
+                    <div class="text-sm text-gray-500">Your score</div>
+                    <div id="final-score" class="text-4xl font-bold text-purple-600">0</div>
+                </div>
+                
+                <button id="play-again-btn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition">
+                    Play Again
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Game state
+        const gameState = {
+            word: '',
+            category: '',
+            hint: '',
+            guessedLetters: [],
+            wrongGuesses: 0,
+            score: 0,
+            gamesPlayed: 0,
+            gamesWon: 0,
+            maxWrongGuesses: 6,
+            isGameOver: false
+        };
+        
+        // Word categories with hints
+        const wordCategories = [
+            {
+                category: "Technology",
+                words: [
+                    { word: "algorithm", hint: "A set of rules to solve a problem" },
+                    { word: "database", hint: "Structured collection of data" },
+                    { word: "javascript", hint: "Programming language for the web" },
+                    { word: "firewall", hint: "Network security system" },
+                    { word: "encryption", hint: "Process of encoding information" }
+                ]
+            },
+            {
+                category: "Science",
+                words: [
+                    { word: "microscope", hint: "Instrument for viewing small objects" },
+                    { word: "photosynthesis", hint: "Process plants use to make food" },
+                    { word: "chromosome", hint: "Contains DNA in cells" },
+                    { word: "gravity", hint: "Force that attracts objects" },
+                    { word: "molecule", hint: "Group of bonded atoms" }
+                ]
+            },
+            {
+                category: "Geography",
+                words: [
+                    { word: "antarctica", hint: "Coldest continent on Earth" },
+                    { word: "amazon", hint: "Largest rainforest in the world" },
+                    { word: "kilimanjaro", hint: "Highest mountain in Africa" },
+                    { word: "sahara", hint: "Largest hot desert in the world" },
+                    { word: "ganges", hint: "Sacred river in India" }
+                ]
+            },
+            {
+                category: "Sports",
+                words: [
+                    { word: "basketball", hint: "Game played with a hoop and ball" },
+                    { word: "volleyball", hint: "Game with a net and no touching the ball twice" },
+                    { word: "badminton", hint: "Sport with a shuttlecock" },
+                    { word: "gymnastics", hint: "Sport involving flips and balance" },
+                    { word: "swimming", hint: "Sport done in water" }
+                ]
+            },
+            {
+                category: "Food",
+                words: [
+                    { word: "spaghetti", hint: "Long, thin pasta" },
+                    { word: "avocado", hint: "Green fruit with a large pit" },
+                    { word: "croissant", hint: "French pastry with layers" },
+                    { word: "sushi", hint: "Japanese dish with rice and fish" },
+                    { word: "chocolate", hint: "Sweet treat made from cacao" }
+                ]
+            }
+        ];
+        
+        // DOM Elements
+        const wordDisplay = document.getElementById('word-display');
+        const categoryDisplay = document.getElementById('category');
+        const wrongGuessesDisplay = document.getElementById('wrong-guesses');
+        const scoreDisplay = document.getElementById('score');
+        const keyboard = document.getElementById('keyboard');
+        const hintBtn = document.getElementById('hint-btn');
+        const hintDisplay = document.getElementById('hint-display');
+        const hintText = document.getElementById('hint-text');
+        const newGameBtn = document.getElementById('new-game-btn');
+        const messageDisplay = document.getElementById('message');
+        const gamesPlayedDisplay = document.getElementById('games-played');
+        const gamesWonDisplay = document.getElementById('games-won');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const gameResultTitle = document.getElementById('game-result-title');
+        const gameResultMessage = document.getElementById('game-result-message');
+        const correctWordDisplay = document.getElementById('correct-word');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const playAgainBtn = document.getElementById('play-again-btn');
+        const gameResultIcon = document.getElementById('game-result-icon');
+        
+        // Initialize the game
+        function initGame() {
+            // Reset game state
+            gameState.guessedLetters = [];
+            gameState.wrongGuesses = 0;
+            gameState.isGameOver = false;
+            
+            // Select a random category and word
+            const randomCategory = wordCategories[Math.floor(Math.random() * wordCategories.length)];
+            gameState.category = randomCategory.category;
+            const randomWordObj = randomCategory.words[Math.floor(Math.random() * randomCategory.words.length)];
+            gameState.word = randomWordObj.word.toLowerCase();
+            gameState.hint = randomWordObj.hint;
+            
+            // Update UI
+            updateWordDisplay();
+            categoryDisplay.textContent = gameState.category;
+            wrongGuessesDisplay.textContent = `${gameState.wrongGuesses}/${gameState.maxWrongGuesses}`;
+            
+            // Hide all hangman parts except gallows
+            document.querySelectorAll('.hangman-part:not(#gallows-base):not(#gallows-post):not(#gallows-top):not(#gallows-hanger)').forEach(part => {
+                part.style.display = 'none';
+            });
+            
+            // Clear messages
+            messageDisplay.classList.add('hidden');
+            hintDisplay.classList.add('hidden');
+            
+            // Create keyboard
+            createKeyboard();
+            
+            // Update stats
+            updateStats();
+        }
+        
+        // Create virtual keyboard
+        function createKeyboard() {
+            keyboard.innerHTML = '';
+            const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
+            
+            letters.forEach(letter => {
+                const key = document.createElement('button');
+                key.textContent = letter.toUpperCase();
+                key.className = 'keyboard-key bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg transition';
+                key.dataset.letter = letter;
+                key.addEventListener('click', () => handleGuess(letter));
+                keyboard.appendChild(key);
+            });
+        }
+        
+        // Update the word display with guessed letters
+        function updateWordDisplay() {
+            wordDisplay.innerHTML = '';
+            let allLettersGuessed = true;
+            
+            for (let i = 0; i < gameState.word.length; i++) {
+                const letter = gameState.word[i];
+                const letterElement = document.createElement('div');
+                
+                if (gameState.guessedLetters.includes(letter)) {
+                    letterElement.textContent = letter.toUpperCase();
+                    letterElement.className = 'letter-tile guessed bg-purple-600 text-white font-bold text-2xl w-10 h-10 flex items-center justify-center rounded-lg';
+                } else {
+                    letterElement.textContent = '';
+                    letterElement.className = 'letter-tile bg-gray-200 w-10 h-10 rounded-lg';
+                    allLettersGuessed = false;
+                }
+                
+                wordDisplay.appendChild(letterElement);
+            }
+            
+            // Check if player won
+            if (allLettersGuessed && gameState.word.length > 0) {
+                gameWon();
+            }
+        }
+        
+        // Handle letter guess
+        function handleGuess(letter) {
+            if (gameState.isGameOver) return;
+            
+            // Check if letter was already guessed
+            if (gameState.guessedLetters.includes(letter)) {
+                showMessage('You already guessed that letter!', 'text-yellow-600 bg-yellow-100');
+                return;
+            }
+            
+            // Add to guessed letters
+            gameState.guessedLetters.push(letter);
+            
+            // Update keyboard UI
+            const keyElement = document.querySelector(`.keyboard-key[data-letter="${letter}"]`);
+            if (keyElement) {
+                keyElement.classList.add('used');
+                keyElement.classList.remove('hover:bg-gray-200');
+                keyElement.classList.add('cursor-not-allowed');
+            }
+            
+            // Check if letter is in the word
+            if (gameState.word.includes(letter)) {
+                showMessage('Correct guess!', 'text-green-600 bg-green-100');
+                updateWordDisplay();
+                
+                // Add to score for correct guess
+                gameState.score += 10;
+                scoreDisplay.textContent = gameState.score;
+                
+                // Pulse animation for correct guess
+                if (keyElement) {
+                    keyElement.classList.add('bg-green-200', 'text-green-800');
+                    setTimeout(() => {
+                        keyElement.classList.remove('bg-green-200', 'text-green-800');
+                    }, 500);
+                }
+            } else {
+                showMessage('Wrong guess!', 'text-red-600 bg-red-100');
+                gameState.wrongGuesses++;
+                wrongGuessesDisplay.textContent = `${gameState.wrongGuesses}/${gameState.maxWrongGuesses}`;
+                
+                // Add hangman part
+                updateHangman();
+                
+                // Shake animation for wrong guess
+                if (keyElement) {
+                    keyElement.classList.add('bg-red-200', 'text-red-800', 'shake');
+                    setTimeout(() => {
+                        keyElement.classList.remove('shake');
+                    }, 500);
+                }
+                
+                // Check if player lost
+                if (gameState.wrongGuesses >= gameState.maxWrongGuesses) {
+                    gameLost();
+                }
+            }
+        }
+        
+        // Update hangman drawing based on wrong guesses
+        function updateHangman() {
+            const parts = ['head', 'body', 'left-arm', 'right-arm', 'left-leg', 'right-leg'];
+            
+            // Show parts up to the number of wrong guesses
+            for (let i = 0; i < gameState.wrongGuesses; i++) {
+                if (i < parts.length) {
+                    const part = document.getElementById(parts[i]);
+                    if (part) part.style.display = 'block';
+                }
+                
+                // Add face when only 1 guess remains
+                if (gameState.wrongGuesses === gameState.maxWrongGuesses - 1) {
+                    document.getElementById('left-eye').style.display = 'block';
+                    document.getElementById('right-eye').style.display = 'block';
+                    document.getElementById('mouth').style.display = 'block';
+                }
+            }
+        }
+        
+        // Show game message
+        function showMessage(message, classes) {
+            messageDisplay.textContent = message;
+            messageDisplay.className = `mt-4 p-3 rounded-lg text-center font-semibold ${classes}`;
+            messageDisplay.classList.remove('hidden');
+            
+            // Hide message after 2 seconds
+            setTimeout(() => {
+                messageDisplay.classList.add('hidden');
+            }, 2000);
+        }
+        
+        // Handle game won
+        function gameWon() {
+            gameState.isGameOver = true;
+            gameState.gamesPlayed++;
+            gameState.gamesWon++;
+            gameState.score += 50; // Bonus for winning
+            
+            // Update UI
+            scoreDisplay.textContent = gameState.score;
+            updateStats();
+            
+            // Show winning message
+            showMessage('Congratulations! You won!', 'text-green-600 bg-green-100 pulse');
+            
+            // Show game over modal
+            showGameOverModal(true);
+        }
+        
+        // Handle game lost
+        function gameLost() {
+            gameState.isGameOver = true;
+            gameState.gamesPlayed++;
+            
+            // Update UI
+            updateStats();
+            
+            // Show all letters
+            for (let i = 0; i < gameState.word.length; i++) {
+                const letter = gameState.word[i];
+                if (!gameState.guessedLetters.includes(letter)) {
+                    gameState.guessedLetters.push(letter);
+                }
+            }
+            updateWordDisplay();
+            
+            // Show losing message
+            showMessage('Game Over! Try again!', 'text-red-600 bg-red-100');
+            
+            // Show game over modal
+            showGameOverModal(false);
+        }
+        
+        // Show game over modal
+        function showGameOverModal(isWin) {
+            if (isWin) {
+                gameResultTitle.textContent = 'You Won!';
+                gameResultMessage.textContent = 'Congratulations! You guessed the word:';
+                gameResultIcon.innerHTML = '<i class="fas fa-trophy text-yellow-500"></i>';
+                gameOverModal.classList.remove('bg-red-50');
+                gameOverModal.classList.add('bg-green-50');
+            } else {
+                gameResultTitle.textContent = 'Game Over';
+                gameResultMessage.textContent = 'The correct word was:';
+                gameResultIcon.innerHTML = '<i class="fas fa-sad-tear text-red-500"></i>';
+                gameOverModal.classList.remove('bg-green-50');
+                gameOverModal.classList.add('bg-red-50');
+            }
+            
+            correctWordDisplay.textContent = gameState.word.toUpperCase();
+            finalScoreDisplay.textContent = gameState.score;
+            gameOverModal.classList.remove('hidden');
+        }
+        
+        // Update game stats
+        function updateStats() {
+            gamesPlayedDisplay.textContent = gameState.gamesPlayed;
+            gamesWonDisplay.textContent = gameState.gamesWon;
+            scoreDisplay.textContent = gameState.score;
+        }
+        
+        // Show hint
+        function showHint() {
+            if (gameState.isGameOver) return;
+            
+            hintText.textContent = gameState.hint;
+            hintDisplay.classList.remove('hidden');
+            
+            // Disable hint button after use
+            hintBtn.disabled = true;
+            hintBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            
+            // Deduct points for using hint
+            gameState.score = Math.max(0, gameState.score - 5);
+            scoreDisplay.textContent = gameState.score;
+            
+            showMessage('Hint used (-5 points)', 'text-blue-600 bg-blue-100');
+        }
+        
+        // Event Listeners
+        hintBtn.addEventListener('click', showHint);
+        newGameBtn.addEventListener('click', initGame);
+        playAgainBtn.addEventListener('click', () => {
+            gameOverModal.classList.add('hidden');
+            initGame();
+        });
+        
+        // Keyboard event listener
+        document.addEventListener('keydown', (e) => {
+            if (e.key >= 'a' && e.key <= 'z') {
+                handleGuess(e.key);
+            }
+        });
+        
+        // Start the game
+        initGame();
+    </script>
+</body>
+</html>
